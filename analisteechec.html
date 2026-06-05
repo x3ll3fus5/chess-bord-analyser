@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyseur d'Échecs Interactif</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 32px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .main-content {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .board-section {
+            flex: 0 1 750px;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 0;
+            width: 100%;
+            max-width: 650px;
+            aspect-ratio: 1;
+            margin: 0 auto 20px;
+            border: 3px solid #333;
+            background: #333;
+        }
+        .square {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: move;
+            position: relative;
+            user-select: none;
+            font-size: 50px;
+            font-weight: bold;
+            line-height: 1;
+            min-height: 80px;
+        }
+        .square.light {
+            background: #f0d9b5;
+        }
+        .square.dark {
+            background: #b58863;
+        }
+        .square:hover {
+            opacity: 0.85;
+        }
+        .piece {
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.1s;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+        }
+        .piece:active {
+            cursor: grabbing;
+            transform: scale(1.15);
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-new {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-new:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-undo {
+            background: #ff6b6b;
+            color: white;
+        }
+        .btn-undo:hover {
+            background: #ff5252;
+        }
+        .btn-edit {
+            background: #26a69a;
+            color: white;
+        }
+        .btn-edit:hover {
+            background: #1e7d73;
+        }
+        .info-section {
+            flex: 1;
+            min-width: 350px;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-height: 850px;
+            overflow-y: auto;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        h3 {
+            color: #555;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        #status {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 15px 0;
+            padding: 12px;
+            background: #f0f4ff;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .analysis-box {
+            background: #f8f9ff;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+            border-radius: 6px;
+            display: none;
+        }
+        .analysis-box.active {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .best-move {
+            font-size: 28px;
+            font-weight: bold;
+            color: #764ba2;
+            font-family: monospace;
+            text-align: center;
+            padding: 12px;
+            background: #fff;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .move-history {
+            background: #f0f4ff;
+            padding: 12px;
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .move-history p {
+            margin: 5px 0;
+            color: #555;
+        }
+        .loading {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .modal-content h2 {
+            margin-top: 0;
+        }
+        .close-modal {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+        }
+        .close-modal:hover {
+            color: #333;
+        }
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 15px 0;
+            resize: vertical;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .instructions {
+            background: #fff9e6;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #ffa500;
+            margin: 15px 0;
+            font-size: 13px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>♟️ Analyseur d'Échecs avec Stockfish ♟️</h1>
+        
+        <div class="main-content">
+            <div class="board-section">
+                <div class="chessboard" id="board"></div>
+                <div class="button-group">
+                    <button class="btn-new" onclick="gameInstance.reset()">Nouvelle Partie</button>
+                    <button class="btn-undo" onclick="gameInstance.undo()">Annuler</button>
+                    <button class="btn-edit" onclick="openEditor()">✏️ Éditer Position</button>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2>📊 Analyse Stockfish</h2>
+                <div id="status">Prêt à jouer</div>
+                
+                <div id="analysis" class="analysis-box">
+                    <p><strong>🎯 Meilleur coup :</strong></p>
+                    <div class="best-move" id="bestMove">-</div>
+                    
+                    <p><strong>📈 Évaluation :</strong> <span id="evaluation" style="color: #667eea;">-</span></p>
+                </div>
+
+                <h3>📜 Historique des coups</h3>
+                <div id="moves" class="move-history">
+                    <p class="loading">Aucun coup joué</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Éditeur -->
+    <div id="editorModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeEditor()">&times;</span>
+            <h2>✏️ Éditeur de Position</h2>
+            
+            <div class="instructions">
+                <strong>📋 Format FEN :</strong> Collez la notation FEN de la position
+            </div>
+
+            <label><strong>Position FEN :</strong></label>
+            <textarea id="fenInput" placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn-new" style="flex: 1;" onclick="applyFEN()">✅ Appliquer</button>
+                <button class="btn-undo" style="flex: 1;" onclick="closeEditor()">❌ Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessjs/0.10.4/chess.min.js"></script>
+
+    <script>
+        const PIECES = {
+            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+        };
+
+        let gameInstance = {
+            chess: new Chess(),
+            draggedFrom: null,
+
+            reset() {
+                this.chess.reset();
+                renderBoard();
+                document.getElementById('analysis').classList.remove('active');
+                document.getElementById('moves').innerHTML = '<p class="loading">Aucun coup joué</p>';
+                updateStatus('Prêt à jouer');
+            },
+
+            undo() {
+                this.chess.undo();
+                renderBoard();
+                document.getElementById('analysis').classList.remove('active');
+                updateStatus((this.chess.turn() === 'w' ? '⚫ Blancs' : '⚪ Noirs') + ' à jouer');
+                updateMoveHistory();
+            },
+
+            makeMove(from, to) {
+                const moves = this.chess.moves({ square: from, verbose: true });
+                let move = null;
+
+                for (let m of moves) {
+                    if (m.to === to) {
+                        move = m;
+                        break;
+                    }
+                }
+
+                if (!move) return false;
+
+                this.chess.move(move);
+                renderBoard();
+                updateStatus((this.chess.turn() === 'w' ? '⚫ Blancs' : '⚪ Noirs') + ' à jouer');
+                updateMoveHistory();
+                return true;
+            }
+        };
+
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+
+            for (let rank = 8; rank >= 1; rank--) {
+                for (let file = 0; file < 8; file++) {
+                    const square = String.fromCharCode(97 + file) + rank;
+                    const piece = gameInstance.chess.get(square);
+                    const isLight = (file + rank) % 2 === 0;
+
+                    const squareEl = document.createElement('div');
+                    squareEl.className = `square ${isLight ? 'light' : 'dark'}`;
+                    squareEl.id = square;
+
+                    if (piece) {
+                        const pieceEl = document.createElement('div');
+                        pieceEl.className = 'piece';
+                        pieceEl.textContent = PIECES[piece.type] || '?';
+                        pieceEl.style.color = piece.color === 'w' ? '#222' : '#fff';
+                        pieceEl.draggable = true;
+
+                        pieceEl.addEventListener('dragstart', (e) => {
+                            gameInstance.draggedFrom = square;
+                            e.dataTransfer.effectAllowed = 'move';
+                        });
+
+                        squareEl.appendChild(pieceEl);
+                    }
+
+                    squareEl.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                    });
+
+                    squareEl.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        if (gameInstance.draggedFrom && gameInstance.draggedFrom !== square) {
+                            gameInstance.makeMove(gameInstance.draggedFrom, square);
+                        }
+                        gameInstance.draggedFrom = null;
+                    });
+
+                    boardEl.appendChild(squareEl);
+                }
+            }
+        }
+
+        function updateStatus(text) {
+            document.getElementById('status').innerHTML = text;
+        }
+
+        function updateMoveHistory() {
+            const history = gameInstance.chess.history({ verbose: true });
+            const movesDiv = document.getElementById('moves');
+
+            if (history.length === 0) {
+                movesDiv.innerHTML = '<p class="loading">Aucun coup joué</p>';
+                return;
+            }
+
+            let html = '';
+            for (let i = 0; i < history.length; i += 2) {
+                const moveNum = (i / 2) + 1;
+                html += `<p><strong>${moveNum}.</strong> ${history[i].san}`;
+                if (i + 1 < history.length) {
+                    html += ` ${history[i + 1].san}`;
+                }
+                html += '</p>';
+            }
+
+            movesDiv.innerHTML = html;
+        }
+
+        function openEditor() {
+            document.getElementById('editorModal').classList.add('active');
+            document.getElementById('fenInput').value = gameInstance.chess.fen();
+        }
+
+        function closeEditor() {
+            document.getElementById('editorModal').classList.remove('active');
+        }
+
+        function applyFEN() {
+            const fen = document.getElementById('fenInput').value.trim();
+
+            if (!fen) {
+                alert('Veuillez entrer une position FEN valide');
+                return;
+            }
+
+            if (gameInstance.chess.load(fen)) {
+                renderBoard();
+                document.getElementById('analysis').classList.remove('active');
+                document.getElementById('moves').innerHTML = '<p class="loading">Aucun coup joué</p>';
+                updateStatus((gameInstance.chess.turn() === 'w' ? '⚫ Blancs' : '⚪ Noirs') + ' à jouer');
+                closeEditor();
+            } else {
+                alert('❌ FEN invalide ! Vérifiez le format');
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('editorModal');
+            if (event.target === modal) {
+                closeEditor();
+            }
+        }
+
+        // Initialiser
+        renderBoard();
+        updateStatus('Prêt à jouer');
+    </script>
+</body>
+</html>
