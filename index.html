@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyseur d'Échecs</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>♟️ Analyseur d'Échecs</h1>
+        
+        <div class="main-content">
+            <!-- Plateau d'échecs -->
+            <div class="board-section">
+                <div id="board" class="board"></div>
+                <div class="board-controls">
+                    <button id="resetBtn" class="btn">Nouveau Jeu</button>
+                    <button id="undoBtn" class="btn">Annuler</button>
+                </div>
+            </div>
+
+            <!-- Panneau d'analyse -->
+            <div class="analysis-panel">
+                <h2>📊 Analyse</h2>
+                
+                <div class="info-box">
+                    <p><strong>Tour :</strong> <span id="turn">Blanc</span></p>
+                    <p><strong>Coups joués :</strong> <span id="moveCount">0</span></p>
+                </div>
+
+                <div class="best-move-box">
+                    <h3>🎯 Meilleur Coup</h3>
+                    <p id="bestMove" class="best-move-text">En attente d'analyse...</p>
+                    <button id="analyzeBestMove" class="btn btn-primary">Analyser</button>
+                </div>
+
+                <div class="variations-box">
+                    <h3>📈 Variantes</h3>
+                    <ul id="variationsList" class="variations-list">
+                        <li>Aucune variante calculée</li>
+                    </ul>
+                </div>
+
+                <div class="fen-box">
+                    <h3>FEN</h3>
+                    <input type="text" id="fenInput" class="fen-input" readonly>
+                    <button id="copyFen" class="btn btn-small">Copier</button>
+                </div>
+
+                <div class="history-box">
+                    <h3>Historique des coups</h3>
+                    <div id="moveHistory" class="move-history">
+                        Aucun coup joué
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Librairie chess.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
