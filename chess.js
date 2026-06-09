@@ -6,6 +6,9 @@ class ChessGame {
         this.validMoves = [];
         this.moveHistory = [];
         this.capturedPieces = { white: [], black: [] };
+        // Suivi des mouvements pour le roque
+        this.kingMoved = { white: false, black: false };
+        this.rookMoved = { white: { left: false, right: false }, black: { left: false, right: false } };
         this.init();
     }
 
@@ -238,6 +241,8 @@ class ChessGame {
 
     getKingMoves(row, col, isWhite) {
         const moves = [];
+        
+        // Mouvements normaux du roi
         for (let dRow = -1; dRow <= 1; dRow++) {
             for (let dCol = -1; dCol <= 1; dCol++) {
                 if (dRow === 0 && dCol === 0) continue;
@@ -253,12 +258,55 @@ class ChessGame {
                 }
             }
         }
+
+        // Roque (castling)
+        moves.push(...this.getCastlingMoves(row, col, isWhite));
+
+        return moves;
+    }
+
+    getCastlingMoves(row, col, isWhite) {
+        const moves = [];
+        const player = isWhite ? 'white' : 'black';
+        
+        // Le roi ne doit pas avoir bougé
+        if (this.kingMoved[player]) return moves;
+
+        // Le roi doit être à sa position initiale
+        const kingRow = isWhite ? 7 : 0;
+        if (row !== kingRow || col !== 4) return moves;
+
+        // Roque petit (côté roi) - déplacement vers la droite
+        if (!this.rookMoved[player].right) {
+            if (!this.board[kingRow][5] && !this.board[kingRow][6]) {
+                const rook = this.board[kingRow][7];
+                if (rook && rook.toUpperCase() === 'R' && rook === rook.toUpperCase() === isWhite) {
+                    moves.push({ row: kingRow, col: 6, castling: 'kingside' });
+                }
+            }
+        }
+
+        // Roque grand (côté dame) - déplacement vers la gauche
+        if (!this.rookMoved[player].left) {
+            if (!this.board[kingRow][3] && !this.board[kingRow][2] && !this.board[kingRow][1]) {
+                const rook = this.board[kingRow][0];
+                if (rook && rook.toUpperCase() === 'R' && rook === rook.toUpperCase() === isWhite) {
+                    moves.push({ row: kingRow, col: 2, castling: 'queenside' });
+                }
+            }
+        }
+
         return moves;
     }
 
     movePiece(fromRow, fromCol, toRow, toCol) {
         const piece = this.board[fromRow][fromCol];
         const capturedPiece = this.board[toRow][toCol];
+        const isWhite = piece === piece.toUpperCase();
+        const player = isWhite ? 'white' : 'black';
+        
+        // Trouver le mouvement pour vérifier si c'est un roque
+        const castlingMove = this.validMoves.find(m => m.row === toRow && m.col === toCol && m.castling);
 
         // Enregistrer la capture
         if (capturedPiece) {
@@ -266,25 +314,60 @@ class ChessGame {
             this.updateCapturedPieces();
         }
 
-        // Effectuer le mouvement
+        // Effectuer le mouvement normal
         this.board[toRow][toCol] = piece;
         this.board[fromRow][fromCol] = null;
 
-        // Enregistrer le coup
-        this.recordMove(fromRow, fromCol, toRow, toCol, piece, capturedPiece);
+        // Gérer le roque
+        if (castlingMove) {
+            if (castlingMove.castling === 'kingside') {
+                // Petit roque - la tour se déplace de h à f
+                this.board[toRow][5] = this.board[toRow][7];
+                this.board[toRow][7] = null;
+                this.recordMove(fromRow, fromCol, toRow, toCol, piece, capturedPiece, 'O-O');
+            } else if (castlingMove.castling === 'queenside') {
+                // Grand roque - la tour se déplace de a à d
+                this.board[toRow][3] = this.board[toRow][0];
+                this.board[toRow][0] = null;
+                this.recordMove(fromRow, fromCol, toRow, toCol, piece, capturedPiece, 'O-O-O');
+            }
+            
+            // Marquer le roi et la tour comme ayant bougé
+            this.kingMoved[player] = true;
+            if (castlingMove.castling === 'kingside') {
+                this.rookMoved[player].right = true;
+            } else {
+                this.rookMoved[player].left = true;
+            }
+        } else {
+            // Mouvements normaux
+            if (piece.toUpperCase() === 'K') {
+                this.kingMoved[player] = true;
+            }
+            if (piece.toUpperCase() === 'R') {
+                if (fromCol === 0) this.rookMoved[player].left = true;
+                if (fromCol === 7) this.rookMoved[player].right = true;
+            }
+            
+            this.recordMove(fromRow, fromCol, toRow, toCol, piece, capturedPiece);
+        }
 
         // Changement de joueur
         this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
         this.updatePlayerInfo();
     }
 
-    recordMove(fromRow, fromCol, toRow, toCol, piece, capturedPiece) {
-        const fromPos = this.coordsToAlgebraic(fromRow, fromCol);
-        const toPos = this.coordsToAlgebraic(toRow, toCol);
-        const capture = capturedPiece ? 'x' : '';
-        const moveNotation = `${piece}${fromPos}${capture}${toPos}`;
-
-        this.moveHistory.push(moveNotation);
+    recordMove(fromRow, fromCol, toRow, toCol, piece, capturedPiece, notation = null) {
+        if (notation) {
+            // Roque
+            this.moveHistory.push(notation);
+        } else {
+            const fromPos = this.coordsToAlgebraic(fromRow, fromCol);
+            const toPos = this.coordsToAlgebraic(toRow, toCol);
+            const capture = capturedPiece ? 'x' : '';
+            const moveNotation = `${piece}${fromPos}${capture}${toPos}`;
+            this.moveHistory.push(moveNotation);
+        }
         this.updateMovesList();
     }
 
@@ -324,6 +407,8 @@ class ChessGame {
         this.validMoves = [];
         this.moveHistory = [];
         this.capturedPieces = { white: [], black: [] };
+        this.kingMoved = { white: false, black: false };
+        this.rookMoved = { white: { left: false, right: false }, black: { left: false, right: false } };
         this.renderBoard();
         this.updatePlayerInfo();
         this.updateMovesList();
