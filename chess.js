@@ -369,9 +369,10 @@ class ChessGame {
             if (!this.board[kingRow][5] && !this.board[kingRow][6]) {
                 const rook = this.board[kingRow][7];
                 if (rook && rook.toUpperCase() === 'R' && rook === rook.toUpperCase() === isWhite) {
-                    // Vérifier que les cases f1/f8 et g1/g8 ne sont pas attaquées
+                    // Vérifier que les cases f1/f8, g1/g8 et h1/h8 ne sont pas attaquées
                     if (!this.isSquareAttacked(kingRow, 5, !isWhite) && 
-                        !this.isSquareAttacked(kingRow, 6, !isWhite)) {
+                        !this.isSquareAttacked(kingRow, 6, !isWhite) &&
+                        !this.isSquareAttacked(kingRow, 7, !isWhite)) {
                         moves.push({ row: kingRow, col: 6, castling: 'kingside' });
                     }
                 }
@@ -383,9 +384,10 @@ class ChessGame {
             if (!this.board[kingRow][3] && !this.board[kingRow][2] && !this.board[kingRow][1]) {
                 const rook = this.board[kingRow][0];
                 if (rook && rook.toUpperCase() === 'R' && rook === rook.toUpperCase() === isWhite) {
-                    // Vérifier que les cases d1/d8 et c1/c8 ne sont pas attaquées
+                    // Vérifier que les cases d1/d8, c1/c8 et a1/a8 ne sont pas attaquées
                     if (!this.isSquareAttacked(kingRow, 3, !isWhite) && 
-                        !this.isSquareAttacked(kingRow, 2, !isWhite)) {
+                        !this.isSquareAttacked(kingRow, 2, !isWhite) &&
+                        !this.isSquareAttacked(kingRow, 0, !isWhite)) {
                         moves.push({ row: kingRow, col: 2, castling: 'queenside' });
                     }
                 }
