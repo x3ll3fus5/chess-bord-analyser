@@ -265,6 +265,91 @@ class ChessGame {
         return moves;
     }
 
+    // Vérifie si une case est attaquée par l'adversaire
+    isSquareAttacked(row, col, byWhite) {
+        // Vérifier toutes les pièces adverses
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+                const piece = this.board[r][c];
+                if (!piece) continue;
+                
+                const isWhite = piece === piece.toUpperCase();
+                // Si la pièce n'appartient pas à l'attaquant, passer
+                if (isWhite !== byWhite) continue;
+
+                const type = piece.toUpperCase();
+
+                // Vérifier si cette pièce peut attaquer la case (row, col)
+                switch (type) {
+                    case 'P':
+                        if (this.pawnAttacks(r, c, row, col, isWhite)) return true;
+                        break;
+                    case 'N':
+                        if (this.knightAttacks(r, c, row, col)) return true;
+                        break;
+                    case 'B':
+                        if (this.bishopAttacks(r, c, row, col)) return true;
+                        break;
+                    case 'R':
+                        if (this.rookAttacks(r, c, row, col)) return true;
+                        break;
+                    case 'Q':
+                        if (this.queenAttacks(r, c, row, col)) return true;
+                        break;
+                    case 'K':
+                        if (this.kingAttacks(r, c, row, col)) return true;
+                        break;
+                }
+            }
+        }
+        return false;
+    }
+
+    pawnAttacks(fromRow, fromCol, toRow, toCol, isWhite) {
+        const direction = isWhite ? -1 : 1;
+        return fromRow + direction === toRow && Math.abs(fromCol - toCol) === 1;
+    }
+
+    knightAttacks(fromRow, fromCol, toRow, toCol) {
+        const dRow = Math.abs(fromRow - toRow);
+        const dCol = Math.abs(fromCol - toCol);
+        return (dRow === 2 && dCol === 1) || (dRow === 1 && dCol === 2);
+    }
+
+    bishopAttacks(fromRow, fromCol, toRow, toCol) {
+        if (Math.abs(fromRow - toRow) !== Math.abs(fromCol - toCol)) return false;
+        return this.isPathClear(fromRow, fromCol, toRow, toCol);
+    }
+
+    rookAttacks(fromRow, fromCol, toRow, toCol) {
+        if (fromRow !== toRow && fromCol !== toCol) return false;
+        return this.isPathClear(fromRow, fromCol, toRow, toCol);
+    }
+
+    queenAttacks(fromRow, fromCol, toRow, toCol) {
+        return this.bishopAttacks(fromRow, fromCol, toRow, toCol) || 
+               this.rookAttacks(fromRow, fromCol, toRow, toCol);
+    }
+
+    kingAttacks(fromRow, fromCol, toRow, toCol) {
+        return Math.abs(fromRow - toRow) <= 1 && Math.abs(fromCol - toCol) <= 1;
+    }
+
+    isPathClear(fromRow, fromCol, toRow, toCol) {
+        const dRow = toRow > fromRow ? 1 : toRow < fromRow ? -1 : 0;
+        const dCol = toCol > fromCol ? 1 : toCol < fromCol ? -1 : 0;
+        
+        let r = fromRow + dRow;
+        let c = fromCol + dCol;
+        
+        while (r !== toRow || c !== toCol) {
+            if (this.board[r][c]) return false;
+            r += dRow;
+            c += dCol;
+        }
+        return true;
+    }
+
     getCastlingMoves(row, col, isWhite) {
         const moves = [];
         const player = isWhite ? 'white' : 'black';
@@ -276,12 +361,19 @@ class ChessGame {
         const kingRow = isWhite ? 7 : 0;
         if (row !== kingRow || col !== 4) return moves;
 
+        // Le roi ne peut pas être en échec
+        if (this.isSquareAttacked(row, col, !isWhite)) return moves;
+
         // Roque petit (côté roi) - déplacement vers la droite
         if (!this.rookMoved[player].right) {
             if (!this.board[kingRow][5] && !this.board[kingRow][6]) {
                 const rook = this.board[kingRow][7];
                 if (rook && rook.toUpperCase() === 'R' && rook === rook.toUpperCase() === isWhite) {
-                    moves.push({ row: kingRow, col: 6, castling: 'kingside' });
+                    // Vérifier que les cases f1/f8 et g1/g8 ne sont pas attaquées
+                    if (!this.isSquareAttacked(kingRow, 5, !isWhite) && 
+                        !this.isSquareAttacked(kingRow, 6, !isWhite)) {
+                        moves.push({ row: kingRow, col: 6, castling: 'kingside' });
+                    }
                 }
             }
         }
@@ -291,7 +383,11 @@ class ChessGame {
             if (!this.board[kingRow][3] && !this.board[kingRow][2] && !this.board[kingRow][1]) {
                 const rook = this.board[kingRow][0];
                 if (rook && rook.toUpperCase() === 'R' && rook === rook.toUpperCase() === isWhite) {
-                    moves.push({ row: kingRow, col: 2, castling: 'queenside' });
+                    // Vérifier que les cases d1/d8 et c1/c8 ne sont pas attaquées
+                    if (!this.isSquareAttacked(kingRow, 3, !isWhite) && 
+                        !this.isSquareAttacked(kingRow, 2, !isWhite)) {
+                        moves.push({ row: kingRow, col: 2, castling: 'queenside' });
+                    }
                 }
             }
         }
